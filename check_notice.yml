@@ -1,0 +1,38 @@
+name: 충북대 법전원 공지 체크
+
+on:
+  schedule:
+    # 5분마다 실행 (UTC 기준, 한국시간 -9시간)
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}   # 수동 실행 버튼도 사용 가능
+
+permissions:
+  contents: write   # last_seen.json 커밋을 위해 필요
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 공지사항 체크 및 알림 전송
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python check_notice.py
+
+      - name: 상태 파일(last_seen.json) 커밋
+        run: |
+          git config user.name "notice-bot"
+          git config user.email "notice-bot@users.noreply.github.com"
+          git add last_seen.json
+          git diff --cached --quiet || git commit -m "update last_seen"
+          git push
